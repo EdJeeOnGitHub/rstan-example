@@ -1,0 +1,174 @@
+---
+title: "Bayesian Modelling in RStan"
+author: "Ed Jee"
+date: "14/05/2019"
+output: ioslides_presentation
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, 
+                      warning = FALSE,
+                      message = FALSE)
+library(knitr)
+```
+
+
+## Contents HERE
+
+## What is Stan?
+
+[Stan](https://mc-stan.org/) takes the difficult parts out of Markov Chain Monte Carlo (MCMC) and statistical computation.
+
+Essentially it's an interface to a bunch of linear algebra written in C++ and some probability density functions.
+
+Stan lets us focus on writing model code that approximately resembles how we write Bayesian models with pen and paper.
+
+
+```{r, fig.width=2, fig.height=2, fig.align='right'}
+include_graphics("../img/stan_logo.png")
+```
+
+## What is RStan?
+
+RStan is just a wrapper around Stan that lets us access Stan from R.
+
+We don't need to use RStan, instead we could use:
+
+- Python, PyStan.
+- Shell, CMDStan.
+- MATLAB, MatlabStan.
+- Julia, Stan.jl.
+- Stata, StataStan (if you __really__ want to).
+
+However, RStan is the most mature option with the largest community and a rich ecosystem of supporting packages ([rstanarm](https://mc-stan.org/rstanarm/), [brms](https://mc-stan.org/users/interfaces/brms), [tidybayes](http://mjskay.github.io/tidybayes/)...).
+
+## Why Stan?
+
+- Stan is more flexible than alternative Bayesian offerings such as JAGS and BUGS.
+- Stan's MCMC methods use __Hamiltonian Monte Carlo__ rather than Gibbs sampling or Metropolis-Hastings.
+    - This is sort of a big deal.
+- Models we couldn't dream of fitting with Gibbs or MH are now (relatively) easy to fit.
+
+## Our First Model
+
+The "hello world!" of Bayesian modelling in Stan is the [eight schools experiment](https://github.com/stan-dev/rstan/wiki/RStan-Getting-Started) (Rubin 1981, Gelman et al 2003).
+
+We want to find the effect of specialist coaching on SAT test scores. The programme was implemented in parallel across 8 different schools:
+
+
+```{r, results = "asis"}
+library(dplyr)
+school_data <- list(J = 8, 
+                    y = c(28,  8, -3,  7, -1,  1, 18, 12),
+                    sigma = c(15, 10, 16, 11,  9, 11, 10, 18))
+school_data %>% 
+  as_tibble() %>% 
+  mutate(school = row_number()) %>% 
+  select(-J) %>% 
+  t() %>% 
+  kable()
+```
+
+
+## The Model:
+
+$$
+\begin{aligned}
+y_j & \sim \text{Normal}(\theta_j, \sigma_j), \  j = 1,...,8 \\
+\theta_j &\sim \text{Normal}(\mu, \tau), \ j = 1,...,8 \\
+ \sigma_j  & \  \text{known.}
+\end{aligned}
+$$
+
+## data
+
+We create a `.stan` file named `eight_school.stan` (you can find it under the `stan/` folder in the repo).
+
+Each Stan file contains a `data` modelling block:
+```{stan, echo = TRUE,  eval = FALSE, output.var = "data_block"}
+data {
+  int<lower=0> J; // N schools
+  real y[J]; // treatment indexed by J
+  real<lower=0> sigma[J]; // s.e. indexed by J
+}
+```
+
+
+
+## parameters
+
+The parameters model block is pretty simple too:
+
+```{stan, echo = TRUE, eval = FALSE, output.var = "param_block"}
+
+parameters {
+  real mu;
+  real<lower=0> tau;
+  real theta[J];
+}
+
+
+```
+
+
+## model
+
+Here we specify the likelihood and our priors:
+
+```{stan, echo = TRUE, eval = FALSE, output.var="model_block"}
+
+model {
+  // Our "population" priors
+  mu ~ normal(0, 5); // location
+  tau ~ cauchy(0, 5); // scale
+  
+  // The "lower rung" of the hierarchy ladder
+  theta ~ normal(mu, tau); 
+  
+  // Our likelihood:
+  y ~ normal(theta, sigma); 
+}
+
+
+```
+
+## Fitting the Model
+
+```{r, echo = TRUE}
+library(rstan)
+options(mc.cores = 4) # parallel::detectCores() is most people's goto
+rstan_options(auto_write = TRUE) # Saves time on model re-compilation
+
+# Compile the model
+eight_school_centred_stan <- stan_model(file = "stan/eight_school_centred.stan")
+# Fit the model
+model_draws <- sampling(eight_school_centred_stan,
+                        data = school_data)
+```
+
+
+
+## R Markdown
+
+This is an R Markdown presentation. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document.
+
+## Slide with Bullets
+
+- Bullet 1
+- Bullet 2
+- Bullet 3
+
+## Slide with R Output
+
+```{r cars, echo = TRUE}
+summary(cars)
+```
+
+## Slide with Plot
+
+```{r pressure}
+plot(pressure)
+```
+
