@@ -25,3 +25,7 @@ model {
   
   y ~ normal(theta, sigma);
 }
+generated quantities {
+  real Y_rep[J];
+  Y_rep = normal_rng(theta, sigma);
+}

@@ -267,10 +267,111 @@ dt_plot %>%
   facet_wrap(~model) 
 ```
 
-## Plot Coefs
+## Model Output
+
+RStan's default output:
+```{r, echo = TRUE}
+plot(model_draws_ncp, pars = "theta")
+```
+
+## Tidybayes
 
 
-## PPC
+```{r}
+tidy_no_pooling <- school_data %>% 
+  as_tibble() %>% 
+  mutate(j = factor(row_number()),
+         conf.high = y + sigma*1.96,
+         conf.low = y - sigma*1.96,
+         model = "No Pooling") %>% 
+  select(-J,
+         theta = y)
+```
+
+
+```{r, echo = TRUE, eval = FALSE}
+library(tidybayes)
+library(ggstance)
+
+tidy_ncp_draws <- model_draws_ncp %>% 
+  spread_draws(theta[j])  # Tidy model draws.
+
+tidy_ncp_draws %>% 
+  median_qi() %>% 
+  to_broom_names() %>% 
+  mutate(model = "BHM",
+         j = factor(j)) %>% 
+  bind_rows(tidy_no_pooling) %>% # Adding original data
+  ggplot(aes(x = theta, xmin = conf.low, xmax = conf.high,
+             y = j,
+             colour = model)) +
+  geom_pointrangeh(position = position_dodgev(height = 0.3)) +
+  theme_minimal() +
+  geom_vline(xintercept = 0, linetype = "longdash") 
+```
+
+## No Pooling vs Partial Pooling
+
+```{r, echo = FALSE, eval = TRUE}
+library(tidybayes)
+library(ggstance)
+
+tidy_ncp_draws <- model_draws_ncp %>% 
+  spread_draws(theta[j])  # Tidy model draws.
+
+tidy_ncp_draws %>% 
+  median_qi() %>% 
+  to_broom_names() %>% 
+  mutate(model = "BHM",
+         j = factor(j)) %>% 
+  bind_rows(tidy_no_pooling) %>% # Adding original data
+  ggplot(aes(x = theta, xmin = conf.low, xmax = conf.high,
+             y = j,
+             colour = model)) +
+  geom_pointrangeh(position = position_dodgev(height = 0.3)) +
+  theme_minimal() +
+  geom_vline(xintercept = 0, linetype = "longdash") 
+```
+
+
+## ggridges
+```{r}
+library(ggridges)
+tidy_ncp_draws %>% 
+  ungroup() %>% 
+  mutate(j = factor(j)) %>% 
+  ggplot(aes(x = theta,
+             y = j,
+             fill = j)) +
+  stat_density_ridges(scale = 2,
+                      quantile_lines = TRUE,
+                      quantiles = c(0.025,
+                                    0.5,
+                                    0.975),
+                      alpha = 0.7) +
+  theme_ridges() +
+  labs(caption = "Note: 95% credibility intervals and posterior median displayed.")
+```
+
+[ggmcmc](http://xavier-fim.net/post/resources-for-ggmcmc/) is a good alternative too (+ diagnostic plots). 
+
+## Posterior Predictive Checks
+
+Bayesian analysis fully characterises the posterior distribution.
+
+  - This means we can simulate draws from the posterior and inspect goodness-of-fit.
+  
+```{stan eval = FALSE, echo = TRUE, output.var = "gen_quan"}
+generated quantities {
+ real Y_rep[J];
+ for (j in 1:J){
+  Y_rep[j] = normal_rng(theta, sigma);
+ }
+}
+```
+
+
+
 
 
 
@@ -293,28 +394,7 @@ Regression example rugs
 ##
 
 ##
-```{r}
 
-
-
-library(shinystan)
-# model_draws %>% launch_shinystan()
-
-library(tidybayes)
-
-
-tidy_draws <- spread_draws(model_draws_ncp,
-                           theta[j])
-
-library(ggplot2)
-library(ggridges)
-tidy_draws %>% 
-  ggplot(aes(x = theta,
-             y = factor(j),
-             fill = factor(j))) +
-  stat_density_ridges(scale = 4, quantile_lines = TRUE, quantiles = 2) +
-  theme_ridges()
-```
 
 
 ## R Markdown
@@ -341,3 +421,7 @@ summary(cars)
 plot(pressure)
 ```
 
+
+## Further Reading/References
+
+![tidybayes](http://mjskay.github.io/tidybayes/)
