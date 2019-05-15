@@ -2,13 +2,16 @@
 title: "Bayesian Modelling in RStan"
 author: "Ed Jee"
 date: "14/05/2019"
-output: ioslides_presentation
+output: 
+  ioslides_presentation:
+    widescreen: true
+    highlight: tango
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE, 
-                      warning = FALSE,
-                      message = FALSE)
+                      message = FALSE,
+                      warning = TRUE)
 library(knitr)
 ```
 
@@ -79,10 +82,20 @@ y_j & \sim \text{Normal}(\theta_j, \sigma_j), \  j = 1,...,8 \\
  \sigma_j  & \  \text{known.}
 \end{aligned}
 $$
+With pretty standard priors:
+
+$$
+\begin{aligned}
+\mu &\sim \text{Normal}(0, 5) \\
+\tau &\sim \text{Cauchy}^+(0, 5) \\
+\newline
+\theta_j &\sim \text{Normal}(\mu, \tau)
+\end{aligned}
+$$
 
 ## data
 
-We create a `.stan` file named `eight_school.stan` (you can find it under the `stan/` folder in the repo).
+We create a `.stan` file named `eight_school_centred.stan` (you can find it under the `stan/` folder in the repo).
 
 Each Stan file contains a `data` modelling block:
 ```{stan, echo = TRUE,  eval = FALSE, output.var = "data_block"}
@@ -91,6 +104,13 @@ data {
   real y[J]; // treatment indexed by J
   real<lower=0> sigma[J]; // s.e. indexed by J
 }
+```
+
+We need to set up our data in R accordingly:
+```{r, echo = TRUE}
+school_data <- list(J = 8, 
+                    y = c(28,  8, -3,  7, -1,  1, 18, 12),
+                    sigma = c(15, 10, 16, 11,  9, 11, 10, 18))
 ```
 
 
@@ -134,18 +154,167 @@ model {
 
 ## Fitting the Model
 
-```{r, echo = TRUE}
+
+
+
+```{r, echo = TRUE, eval = TRUE}
 library(rstan)
-options(mc.cores = 4) # parallel::detectCores() is most people's goto
-rstan_options(auto_write = TRUE) # Saves time on model re-compilation
+options(mc.cores = parallel::detectCores()) # How many cores to use. 
+rstan_options(auto_write = TRUE) # Saves time on model re-compilation.
+set.seed(1234)
 
 # Compile the model
 eight_school_centred_stan <- stan_model(file = "stan/eight_school_centred.stan")
 # Fit the model
-model_draws <- sampling(eight_school_centred_stan,
-                        data = school_data)
+model_draws_centred <- sampling(eight_school_centred_stan,
+                        data = school_data,
+                        iter = 10000,
+                        chains = 4)
 ```
 
+## Inspecting the Model
+
+
+```{r, echo = TRUE, eval = FALSE}
+library(shinystan)
+launch_shinystan(model_draws_centred)
+```
+
+
+## Fixing the Model
+
+Divergent transition warnings is common when fitting hierarchical models.
+
+We have three options:
+
+  - Reparametrise the model.
+  - Increase adapt_delta.
+  - Try different priors.
+
+
+
+## Non-Centred Parametrisation
+
+A lot of things we do in Bayesian modelling is with an eye towards numerical optimisation - this is one of them:
+
+
+```{stan eval = FALSE, echo = TRUE, output.var = "ncp_param"}
+transformed parameters {
+  real theta[J];
+  for (j in 1:J){
+    theta[j] = mu + tau * theta_tilde[j]; // theta's final form
+  }
+}
+model {
+  mu ~ normal(0, 5);
+  tau ~ cauchy(0, 5);
+  
+  theta_tilde ~ normal(0, 1); // Will be N(mu, tau) after transform
+  
+  y ~ normal(theta, sigma);
+}
+```
+
+## 
+
+Fitting the non-centred model and bumping `adapt_delta` up:
+```{r, echo = TRUE}
+eight_school_non_centred_stan <- stan_model(file = "stan/eight_school_non_centred.stan")
+model_draws_ncp <- sampling(eight_school_non_centred_stan,
+                        data = school_data,
+                        iter = 10000,
+                        chains = 4,
+                        control = list(adapt_delta = 0.95))
+```
+
+## Reparametrisation Solves the Divergent Transition Problem
+
+```{r, fig.align = "center", warning = FALSE, message=FALSE}
+library(tidybayes)
+library(purrr)
+dt_c <- model_draws_centred %>% 
+  spread_draws(theta[j], tau) %>% 
+  filter(j == 1)
+
+sampler_params <- get_sampler_params(model_draws_centred,  inc_warmup=FALSE) %>%
+  map_df(as_tibble)
+
+dt_c <- bind_cols(dt_c,
+                  sampler_params) %>% 
+  mutate(divergent = factor(divergent__),
+         model = "Centred")
+
+
+dt_ncp <- model_draws_ncp %>% 
+  spread_draws(theta[j], tau) %>% 
+  filter(j == 1)
+sampler_params_ncp <-  get_sampler_params(model_draws_ncp,  inc_warmup=FALSE) %>%
+  map_df(as_tibble)
+
+
+dt_ncp <- bind_cols(dt_ncp,
+                  sampler_params_ncp) %>% 
+  mutate(divergent = factor(divergent__),
+         model = "NCP")
+
+dt_plot <- bind_rows(dt_c,
+                     dt_ncp)
+dt_plot %>% 
+  ggplot(aes(x = theta, y = log(tau), colour = divergent, alpha = divergent)) +
+  geom_point() +
+  scale_color_manual(values = c("grey","red")) +
+  theme_minimal() +
+  facet_wrap(~model) 
+```
+
+## Plot Coefs
+
+
+## PPC
+
+
+
+## Bayesian Workflow
+
+
+## Fitting More Models
+
+Regression example Blattman
+
+## OLS LKJ
+## OLS QR decomposition
+## Bayesian Regularisation MAYBE
+
+
+Regression examples rstanarm brms
+
+Regression example rugs
+
+##
+
+##
+```{r}
+
+
+
+library(shinystan)
+# model_draws %>% launch_shinystan()
+
+library(tidybayes)
+
+
+tidy_draws <- spread_draws(model_draws_ncp,
+                           theta[j])
+
+library(ggplot2)
+library(ggridges)
+tidy_draws %>% 
+  ggplot(aes(x = theta,
+             y = factor(j),
+             fill = factor(j))) +
+  stat_density_ridges(scale = 4, quantile_lines = TRUE, quantiles = 2) +
+  theme_ridges()
+```
 
 
 ## R Markdown
