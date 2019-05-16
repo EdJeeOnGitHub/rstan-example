@@ -92,6 +92,10 @@ $$
 \theta_j &\sim \text{Normal}(\mu, \tau)
 \end{aligned}
 $$
+Where do our priors come from?
+
+The same place as our likelihood - or the [internet!](https://github.com/stan-dev/stan/wiki/Prior-Choice-Recommendations)
+
 
 ## data
 
@@ -151,6 +155,7 @@ model {
 
 
 ```
+
 
 ## Fitting the Model
 
@@ -355,6 +360,14 @@ tidy_ncp_draws %>%
 
 [ggmcmc](http://xavier-fim.net/post/resources-for-ggmcmc/) is a good alternative too (+ diagnostic plots). 
 
+
+```{r, eval = FALSE}
+# ggmcmc creates PDF with a bunch of diagnostic plots similar to shinystan
+library(ggmcmc)
+gg_s <- ggs(model_draws_ncp)
+ggmcmc(gg_s)
+```
+
 ## Posterior Predictive Checks
 
 Bayesian analysis fully characterises the posterior distribution.
@@ -363,65 +376,101 @@ Bayesian analysis fully characterises the posterior distribution.
   
 ```{stan eval = FALSE, echo = TRUE, output.var = "gen_quan"}
 generated quantities {
- real Y_rep[J];
- for (j in 1:J){
-  Y_rep[j] = normal_rng(theta, sigma);
- }
+  real Y_rep[J];
+  Y_rep = normal_rng(theta, sigma);
 }
 ```
 
 
+## Density Overlays
+
+```{r, echo = TRUE, fig.height=4, fig.width=6}
+library(bayesplot)
+bayesplot_draws <- extract(model_draws_ncp)
+ppc_dens_overlay(y = tidy_no_pooling$theta,
+                 yrep = bayesplot_draws$Y_rep[1:500, ])
+```
+
+
+## Bayesian Test Statistics
+
+```{r, echo = TRUE}
+ppc_stat(tidy_no_pooling$theta,
+         bayesplot_draws$Y_rep[1:500, ],
+         stat = "mean")
+
+```
+
+
+## 
+
+```{r, echo = TRUE}
+ppc_stat(tidy_no_pooling$theta,
+         bayesplot_draws$Y_rep[1:500, ],
+         stat = "min")
+
+```
 
 
 
+##
+
+```{r, echo = TRUE}
+
+ppc_stat(tidy_no_pooling$theta,
+         bayesplot_draws$Y_rep[1:500, ],
+         stat = "max")
+```
 
 ## Bayesian Workflow
 
 
+- Write down likelihood and choose priors.
+- Code `.stan` file
+    - data block
+    - parameters block
+    - (transformed parameters)
+    - model block
+    - generated quantities
+- Recover simulated parameters.
+- Fit true model.
+- Inspect MCMC diagnostics, FOLK THEOREM!!!
+- Explore results and PPCs.
+
+
+
 ## Fitting More Models
+
+[link](runtime.txt)
 
 Regression example Blattman
 
-## OLS LKJ
-## OLS QR decomposition
-## Bayesian Regularisation MAYBE
+
+OLS LKJ
+OLS QR decomposition
+Bayesian Regularisation MAYBE
 
 
 Regression examples rstanarm brms
 
 Regression example rugs
 
-##
-
-##
-
-
-
-## R Markdown
-
-This is an R Markdown presentation. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
-
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document.
-
-## Slide with Bullets
-
-- Bullet 1
-- Bullet 2
-- Bullet 3
-
-## Slide with R Output
-
-```{r cars, echo = TRUE}
-summary(cars)
-```
-
-## Slide with Plot
-
-```{r pressure}
-plot(pressure)
-```
-
 
 ## Further Reading/References
 
-![tidybayes](http://mjskay.github.io/tidybayes/)
+- [rstan](https://mc-stan.org/users/interfaces/rstan.html)
+- [Divergent Transition Bible](https://mc-stan.org/users/documentation/case-studies/divergences_and_bias.html)
+- [Hamiltonian Monte Carlo](https://arxiv.org/abs/1701.02434)
+- [Beginner Friendly Bayesian Modelling](https://www.amazon.co.uk/Students-Guide-Bayesian-Statistics/dp/1473916364)
+- [Big Boy/Girl Bayesian Stats](http://www.stat.columbia.edu/~gelman/book/)
+
+## Packages
+
+- [tidybayes](http://mjskay.github.io/tidybayes/)
+- [bayesplot](https://mc-stan.org/bayesplot/)
+- [ggplot2](https://ggplot2.tidyverse.org/)
+- [dplyr](https://dplyr.tidyverse.org/)
+- [ggmcmc](http://xavier-fim.net/post/resources-for-ggmcmc/)
+- [shinystan](https://mc-stan.org/shinystan/)
+- [ggstance](https://cran.r-project.org/web/packages/ggstance/index.html)
+- [purrr](https://purrr.tidyverse.org/)
