@@ -1,5 +1,3 @@
-install.packages("tidyverse")
-install.packages("rstan")
 install.packages("shinystan")
 install.packages("tidybayes")
 install.packages("ggstance")
