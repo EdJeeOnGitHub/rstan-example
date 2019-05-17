@@ -9,7 +9,8 @@ RUN apt-get update \
 RUN add-apt-repository -y "ppa:marutter/rrutter" \
 	&& add-apt-repository -y "ppa:marutter/c2d4u3.5" \
 	&& apt-get update \
-	&& apt-get install r-cran-rstan 
+	&& apt-get install r-cran-rstan  \
+	&& apt-get install r-cran-rstanarm
 	
 ## Run an install.R script, if it exists.
 RUN if [ -f install.R ]; then R --quiet -f install.R; fi
