@@ -16,7 +16,13 @@ library(knitr)
 ```
 
 
-## Contents HERE
+## The Plan
+
+- Fitting our first model in RStan.
+- Exploring some more advanced techniques for regression modelling.
+
+Follow along with the [GitHub](https://github.com/EdJeeOnGitHub/rstan-example) repo on your own machines locally, or use a containerised binder session (doesn't require RStan installation):
+[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/EdJeeOnGitHub/rstan-example/master)
 
 ## What is Stan?
 
