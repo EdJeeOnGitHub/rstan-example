@@ -1,5 +1,6 @@
 ## This script accompanies the slides used in the first presentation 
 
+use_precompiled_stan_models <- TRUE
 
 ##---------------------------------------------------
 library(dplyr)
@@ -19,7 +20,12 @@ rstan_options(auto_write = TRUE) # Saves time on model re-compilation.
 set.seed(1234)
 
 # Compile the model
-eight_school_centred_stan <- stan_model(file = "stan/eight_school_centred.stan")
+if (use_precompiled_stan_models){
+  eight_school_centred_stan <- readRDS("stan/precompiled/eight_school_centred.rds")
+} else {
+  eight_school_centred_stan <- stan_model(file = "stan/eight_school_centred.stan")  
+}
+
 # Fit the model
 model_draws_centred <- sampling(eight_school_centred_stan,
                         data = school_data,
@@ -27,12 +33,24 @@ model_draws_centred <- sampling(eight_school_centred_stan,
                         chains = 4)
 
 ##------------------------------------------
-library(shinystan)
-launch_shinystan(model_draws_centred)
+if (use_precompiled_stan_models){
+  library(ggmcmc)
+  ggmcmc(model_draws_centred)
+  
+} else{
+  library(shinystan)
+  launch_shinystan(model_draws_centred)  
+}
+
 
 
 ##--------------------------------------------------------
-eight_school_non_centred_stan <- stan_model(file = "stan/eight_school_non_centred.stan")
+if (use_precompiled_stan_models){
+  eight_school_non_centred_stan <- readRDS(file = "stan/precompiled/eight_school_non_centred.rds")  
+} else {
+  eight_school_non_centred_stan <- stan_model(file = "stan/eight_school_non_centred.stan")   
+}
+
 model_draws_ncp <- sampling(eight_school_non_centred_stan,
                         data = school_data,
                         iter = 2000,
