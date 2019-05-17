@@ -5,13 +5,12 @@ RUN apt-get update \
 	&& apt-get install -y --no-install-recommends apt-utils ed libnlopt-dev \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/
-
-
-# Install rstan
-RUN install2.r --error --deps TRUE \
-    rstan \
-    && rm -rf /tmp/downloaded_packages/ /tmp/*.rds
-
+    
+RUN add-apt-repository -y "ppa:marutter/rrutter" \
+	&& add-apt-repository -y "ppa:marutter/c2d4u3.5" \
+	&& apt-get update \
+	&& apt-get install r-cran-rstan 
+	
 ## Run an install.R script, if it exists.
 RUN if [ -f install.R ]; then R --quiet -f install.R; fi
 
