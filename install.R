@@ -1,3 +1,5 @@
+install.packages("rstan")
+install.packages("rstanarm")
 install.packages("shinystan")
 install.packages("tidybayes")
 install.packages("ggstance")
