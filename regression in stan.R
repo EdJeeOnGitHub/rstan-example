@@ -1,6 +1,7 @@
 ## Bayesian Treatment of Savings Constraints and Microenterprise Development:
 ## Evidence from a Field Experiment in Kenya.
 ## Dupas, Pascaline; Robinson, Jonathan, 2015 
+## https://www.aeaweb.org/articles?id=10.1257/app.5.1.163
 
 ## Dataverse download link https://doi.org/10.7910/DVN/EXL9DX
 
@@ -19,7 +20,7 @@ library(shinystan) # diagnostics
 rstan_options(auto_write = TRUE)
 options(mc.cores = 4)
 
-use_precompiled_models <- FALSE
+use_precompiled_models <- TRUE
 
 ##### Data Cleaning #####
 
@@ -199,7 +200,6 @@ if (use_precompiled_models){
   linear_model_simple <- readRDS(file = "stan/precompiled/linear regression.rds")
 } else {
   linear_model_simple <- stan_model(file = "stan/linear regression.stan")
-  
 }
 
 
@@ -318,8 +318,105 @@ stan_df_logit <- table_5_df %>%
 stan_data_list_logit <- list(
   N = nrow(stan_df_logit),
   K = ncol(stan_df_logit) - 1, # accounting for Y 
-  x = stan_df_logit %>% select(-first6_dep_savings, any_depositied) %>% as.matrix(),
+  x = stan_df_logit %>% select(-first6_dep_savings, any_deposited) %>% as.matrix(),
   y = stan_df_logit$any_deposited
 )
 
 # Either rstanarm or .stan from scratch.
+
+
+##### Very quick rstanarm example ####
+
+
+library(rstanarm)
+library(modelr)
+
+## rstanarm logit
+model_logit <- stan_glm(data = stan_df_logit %>% 
+             select(-first6_dep_savings),
+           formula = any_deposited ~ .,
+           family = binomial(link = "logit"),
+           QR = TRUE)
+
+
+plot(model_logit)
+## rstanarm provides a lot of built in diagnostics:
+pp_check(model_logit, plotfun = "error_binned") 
+pp_check(model_logit, plotfun = "hist", nreps = 5)
+prior_summary(model_logit)
+
+
+## hierarchical rstanarm ##
+stan_df_hier <- table_5_df %>% 
+  select(first6_dep_savings,
+         bg_femalevendor,
+         bg_malevendor,
+         bg_educ, 
+         literate_swahili,
+         bg_age,
+         bg_married,
+         female_married,
+         malevendor_married,
+         rosca_contribK,
+         bg_animalsvalue,
+         bg_durvalue_hh, 
+         per_invest_choice2,
+         per_somewhat_patient, 
+         per_hyperbolic,
+         per_pat_now_impat_later,
+         per_maximpat, 
+         per_missing,
+         wave
+  ) %>% 
+  na.omit() %>% # Dropping 3 NA values
+  filter(first6_dep_savings > 0)  
+
+## This model will take a long time to fit and probably have a host of computational
+## issues once it does sadly.
+hierarchical_linear_regression <- stan_glmer(
+  data = stan_df_hier,
+  formula = log(first6_dep_savings) ~ . | wave
+)
+
+
+##### Examples from tidybayes vignette ####
+library(brms)
+library(modelr)
+
+m_mpg_am <-  brm(mpg ~ log(hp)*am, data = mtcars,
+               family = lognormal,
+               save_dso = TRUE,
+               file = "stan/precompiled/m_mpg_am")
+
+mtcars %>%
+  data_grid(hp = seq_range(hp, n = 200), am) %>%
+  add_fitted_draws(m_mpg_am, n = 100) %>%         # sample 100 fits from the posterior
+  ggplot(aes(x = hp, y = mpg)) +
+  geom_line(aes(y = .value, group = .draw), alpha = 1/20, color = "#08519C") +
+  geom_point(data = mtcars) +
+  facet_wrap(~ am) +
+  theme_minimal()
+
+
+
+m_mpg <- brm(mpg ~ hp * cyl,
+             data = mtcars,
+             save_dso = TRUE,
+             file = "stan/precompiled/m_mpg")
+
+mtcars %>%
+  group_by(cyl) %>%
+  data_grid(hp = seq_range(hp, n = 101)) %>%
+  add_fitted_draws(m_mpg, n = 100) %>%
+  ggplot(aes(x = hp, y = mpg, color = ordered(cyl))) +
+  geom_line(aes(y = .value, group = paste(cyl, .draw)), alpha = .1) +
+  geom_point(data = mtcars) +
+  scale_color_brewer(palette = "Dark2") +
+  theme_minimal()
+
+
+## Stuff I haven't coded/talked about:
+# model selection - see loo package
+# regularisation - see rstanarm hs and hs_plus priors, lasso (double laplace)
+# stan in thw cloud http://www.louisaslett.com/RStudio_AMI/
+# handling parallelisation - see furrr library.
