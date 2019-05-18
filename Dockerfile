@@ -1,17 +1,14 @@
-FROM rocker/verse:3.6.0
+FROM rocker/binder:3.6.0
 MAINTAINER "Ed Jee" edjee96@gmail.com
 
-RUN apt-get update \
-	&& apt-get install -y --no-install-recommends apt-utils ed libnlopt-dev \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/
 
+## Copies your repo files into the Docker Container
+USER root
+COPY . ${HOME}
+RUN chown -R ${NB_USER} ${HOME}
 
-# Install rstan
-RUN install2.r --error --deps TRUE \
-    rstan \
-    rstanarm \
-    && rm -rf /tmp/downloaded_packages/ /tmp/*.rds
+## Become normal user again
+USER ${NB_USER}
 
 ## Run an install.R script, if it exists.
 RUN if [ -f install.R ]; then R --quiet -f install.R; fi
