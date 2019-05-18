@@ -373,10 +373,10 @@ stan_df_hier <- table_5_df %>%
 
 ## This model will take a long time to fit and probably have a host of computational
 ## issues once it does sadly.
-hierarchical_linear_regression <- stan_glmer(
-  data = stan_df_hier,
-  formula = log(first6_dep_savings) ~ . | wave
-)
+# hierarchical_linear_regression <- stan_glmer(
+#   data = stan_df_hier,
+#   formula = log(first6_dep_savings) ~ . | wave
+# )
 
 
 ##### Examples from tidybayes vignette ####
