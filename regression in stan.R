@@ -210,6 +210,9 @@ model_draws_simple <- sampling(linear_model_simple,
 # model_draws_simple %>% launch_shinystan()
 
 ##### QR decomposition #####
+
+##### Go through QR algebra here
+
 if (use_precompiled_models){
   linear_model_QR <- readRDS(file = "stan/precompiled/linear regression QR.stan")
 } else {
@@ -282,9 +285,41 @@ model_draws_QR %>%
 
 
 
+##### Live Code GLMs, robust noise models and rstanarm time depending ##### 
+
+
+stan_df_logit <- table_5_df %>% 
+  select(first6_dep_savings,
+         bg_femalevendor,
+         bg_malevendor,
+         bg_educ, 
+         literate_swahili,
+         bg_age,
+         bg_married,
+         female_married,
+         malevendor_married,
+         rosca_contribK,
+         bg_animalsvalue,
+         bg_durvalue_hh, 
+         per_invest_choice2,
+         per_somewhat_patient, 
+         per_hyperbolic,
+         per_pat_now_impat_later,
+         per_maximpat, 
+         per_missing,
+         wave2,
+         wave3
+  ) %>% 
+  na.omit() %>% # Dropping 3 NA values
+  mutate(any_deposited = ifelse(first6_dep_savings > 0, 1, 0))
 
 
 
+stan_data_list_logit <- list(
+  N = nrow(stan_df_logit),
+  K = ncol(stan_df_logit) - 1, # accounting for Y 
+  x = stan_df_logit %>% select(-first6_dep_savings, any_depositied) %>% as.matrix(),
+  y = stan_df_logit$any_deposited
+)
 
-
-
+# Either rstanarm or .stan from scratch.
