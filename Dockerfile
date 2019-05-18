@@ -1,4 +1,4 @@
-FROM rocker/verse:3.6.0
+FROM rocker/binder:3.6.0
 MAINTAINER "Ed Jee" edjee96@gmail.com
 
 
