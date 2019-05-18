@@ -1,7 +1,7 @@
 ---
 title: "Bayesian Modelling in RStan"
-author: "Ed Jee"
-date: "14/05/2019"
+author:  "Ed Jee, LSE" 
+date: "27/05/2019"
 output: 
   ioslides_presentation:
     widescreen: true
@@ -447,19 +447,12 @@ ppc_stat(tidy_no_pooling$theta,
 
 ## Fitting More Models
 
-[link](runtime.txt)
+Next up we're going to look at:
 
-Regression example Blattman
-
-
-OLS LKJ
-OLS QR decomposition
-Bayesian Regularisation MAYBE
-
-
-Regression examples rstanarm brms
-
-Regression example rugs
+- Simple linear regression in rstan.
+- QR decomposition and regression.
+- Generalised linear models (logit, probit, etc.) and robust noise models.
+- rstanarm and brms.
 
 
 ## Further Reading/References
@@ -468,7 +461,7 @@ Regression example rugs
 - [Divergent Transition Bible](https://mc-stan.org/users/documentation/case-studies/divergences_and_bias.html)
 - [Hamiltonian Monte Carlo](https://arxiv.org/abs/1701.02434)
 - [Beginner Friendly Bayesian Modelling](https://www.amazon.co.uk/Students-Guide-Bayesian-Statistics/dp/1473916364)
-- [Big Boy/Girl Bayesian Stats](http://www.stat.columbia.edu/~gelman/book/)
+- [More Involved Bayesian Modelling](http://www.stat.columbia.edu/~gelman/book/)
 
 ## Packages
 
