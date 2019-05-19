@@ -214,7 +214,7 @@ model_draws_simple <- sampling(linear_model_simple,
 ##### Go through QR algebra here
 
 if (use_precompiled_models){
-  linear_model_QR <- readRDS(file = "stan/precompiled/linear regression QR.stan")
+  linear_model_QR <- readRDS(file = "stan/precompiled/linear regression QR.rds")
 } else {
   linear_model_QR <- stan_model("stan/linear regression QR.stan")
 }
